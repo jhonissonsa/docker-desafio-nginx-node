@@ -1,0 +1,56 @@
+services:
+
+  app:
+    build:
+      context: ./node
+    image: jhonissonsa/desafio-nginx-node:latest 
+    container_name: app
+    restart: always
+    networks:
+      - desafio_net
+    volumes:
+      - ./node:/usr/src/app
+      - /usr/src/app/node_modules
+    expose:
+      - "3000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    image: nginx:stable-alpine
+    container_name: nginx
+    restart: always
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - desafio_net
+    ports:
+      - "8080:8080"
+    depends_on:
+      - app
+
+  db:
+    image: mysql:9.7
+    command: 
+      - --innodb-use-native-aio=0
+    container_name: db
+    restart: always
+    tty: true
+    environment:
+      - MYSQL_DATABASE=desafiodb
+      - MYSQL_USER=mysql
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_PASSWORD=root
+    networks:
+      - desafio_net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+networks:
+  desafio_net:
+    driver: bridge
